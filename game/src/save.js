@@ -1,4 +1,5 @@
-// SOLMAR BAY — localStorage save / load
+// SOLMAR BAY — save / load through localStorage. One slot, versioned,
+// storing money, mission progress, player state, weapons, time and stats.
 const KEY = "solmar-bay-save-v1";
 
 export function hasSave() {
@@ -11,8 +12,8 @@ export function saveGame(state) {
       version: 1,
       savedAt: Date.now(),
       money: state.money,
-      missionIndex: state.missionIndex,
-      completedMissions: state.completedMissions,
+      missionIndex: state.missions.index,
+      completedMissions: state.missions.completed,
       player: { x: state.player.x, y: state.player.y, health: state.player.health, armor: state.player.armor },
       weapons: state.player.weapons,
       hour: state.hour,

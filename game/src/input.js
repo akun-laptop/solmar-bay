@@ -1,9 +1,8 @@
-// SOLMAR BAY — keyboard + mouse input state
-export const keys = {};          // key code -> held
-export const pressed = {};       // key code -> pressed this frame (consumed by game)
-export const mouse = { x: 0, y: 0, down: false, clicked: false, worldX: 0, worldY: 0 };
-
-const CODE_ALIAS = { KeyW: "up", ArrowUp: "up", KeyS: "down", ArrowDown: "down", KeyA: "left", ArrowLeft: "left", KeyD: "right", ArrowRight: "right" };
+// SOLMAR BAY — keyboard and mouse state. The game loop reads this module;
+// `pressed` entries live for exactly one frame so a key tap is never double-counted.
+export const keys = {};      // code -> currently held
+export const pressed = {};   // code -> tapped this frame
+export const mouse = { x: 0, y: 0, down: false, clicked: false };
 
 export function initInput(canvas) {
   window.addEventListener("keydown", (e) => {
@@ -24,7 +23,7 @@ export function initInput(canvas) {
   canvas.addEventListener("contextmenu", (e) => e.preventDefault());
 }
 
-// Movement vector from held keys (-1..1 each axis)
+// Normalised WASD / arrow movement vector.
 export function moveVector() {
   let x = 0, y = 0;
   if (keys.KeyA || keys.ArrowLeft) x -= 1;
@@ -34,11 +33,17 @@ export function moveVector() {
   if (x !== 0 && y !== 0) { x *= Math.SQRT1_2; y *= Math.SQRT1_2; }
   return { x, y };
 }
+
 export function isDown(code) { return !!keys[code]; }
 export function wasPressed(code) { return !!pressed[code]; }
-export function consumePress(code) { if (pressed[code]) { pressed[code] = false; return true; } return false; }
 
-// Clear per-frame press state; call at end of each frame
+// True once if the key was tapped this frame, and clears it.
+export function consumePress(code) {
+  if (pressed[code]) { pressed[code] = false; return true; }
+  return false;
+}
+
+// Call at the end of every frame to clear one-frame state.
 export function endFrame() {
   for (const k in pressed) pressed[k] = false;
   mouse.clicked = false;

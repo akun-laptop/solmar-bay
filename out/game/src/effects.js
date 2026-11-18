@@ -1,9 +1,10 @@
-// SOLMAR BAY — particles, skid marks, screen shake, floating texts
+// SOLMAR BAY — particles, skid marks, floating score text and screen shake.
+// Everything here is transient: it is spawned, fades, and is forgotten.
 import { rand, pick } from "./utils.js";
 
 export const particles = [];
-export const skids = [];       // {x1,y1,x2,y2,life}
-export const floaters = [];    // {x,y,text,life,color}
+export const skids = [];     // {x1,y1,x2,y2,life}
+export const floaters = [];  // {x,y,text,life,color}
 let shakeMag = 0, shakeT = 0;
 
 export function addShake(mag, time = 0.25) {
@@ -13,7 +14,7 @@ export function addShake(mag, time = 0.25) {
 export function shakeOffset(dt) {
   if (shakeT <= 0) return { x: 0, y: 0 };
   shakeT -= dt;
-  const m = shakeMag * (shakeT / 0.25);
+  const m = shakeMag * Math.max(0, shakeT / 0.25);
   if (shakeT <= 0) shakeMag = 0;
   return { x: rand(-m, m), y: rand(-m, m) };
 }
@@ -81,7 +82,6 @@ export function updateEffects(dt) {
 }
 
 export function drawEffects(ctx) {
-  // skid marks
   ctx.strokeStyle = "rgba(10,10,10,0.4)";
   ctx.lineWidth = 3;
   ctx.lineCap = "round";
@@ -90,14 +90,12 @@ export function drawEffects(ctx) {
     ctx.beginPath(); ctx.moveTo(s.x1, s.y1); ctx.lineTo(s.x2, s.y2); ctx.stroke();
   }
   ctx.globalAlpha = 1;
-  // particles
   for (const p of particles) {
     ctx.globalAlpha = Math.max(0, p.life / p.maxLife);
     ctx.fillStyle = p.color;
-    ctx.beginPath(); ctx.arc(p.x, p.y, p.size * (0.5 + p.life / p.maxLife * 0.5), 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(p.x, p.y, p.size * (0.5 + (p.life / p.maxLife) * 0.5), 0, Math.PI * 2); ctx.fill();
   }
   ctx.globalAlpha = 1;
-  // floating texts
   ctx.textAlign = "center";
   ctx.font = "bold 15px sans-serif";
   for (const f of floaters) {

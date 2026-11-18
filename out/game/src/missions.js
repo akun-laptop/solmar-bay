@@ -1,10 +1,10 @@
-// SOLMAR BAY — story missions: 6-chapter arc with objectives + rewards
-import { city } from "./city.js";
+// SOLMAR BAY — the story: six missions following Rico Vance, a getaway
+// driver new to town, and his fixer Mara. Each mission has sequential
+// objectives (drive somewhere, lose the heat, take out a target count)
+// and pays cash on completion.
 import { dist2 } from "./utils.js";
 import { sfx } from "./audio.js";
 
-// Mission definitions. Each has: id, name, giver, briefing lines,
-// objectives (sequential), reward.
 export const MISSIONS = [
   {
     id: "arrival",
@@ -83,7 +83,7 @@ export const MISSIONS = [
       { type: "goto", text: "Drop Mara at the safehouse", x: 340, y: 340, radius: 70 },
     ],
     startWanted: 3,
-    triggerWantedAt: 1, // wanted starts when objective 1 completes
+    triggerWantedAt: 1, // the heat starts when objective 1 completes
   },
   {
     id: "heist",
@@ -107,10 +107,10 @@ export const MISSIONS = [
 
 export function createMissionState() {
   return {
-    index: 0,              // current mission
+    index: 0,        // current mission
     active: false,
     objectiveIndex: 0,
-    kills: 0,              // for eliminate objectives
+    kills: 0,        // progress for "eliminate" objectives
     completed: [],
     failed: false,
   };
@@ -125,7 +125,7 @@ export function currentObjective(ms) {
   return m.objectives[ms.objectiveIndex] || null;
 }
 
-export function startMission(ms, state) {
+export function startMission(ms, game) {
   const m = currentMission(ms);
   if (!m) return false;
   ms.active = true;
@@ -133,67 +133,60 @@ export function startMission(ms, state) {
   ms.kills = 0;
   ms.failed = false;
   if (m.startWanted && (m.triggerWantedAt === undefined || m.triggerWantedAt === 0)) {
-    state.setWanted(m.startWanted);
+    game.setWanted(m.startWanted);
   }
-  state.showDialogue(m.giver, m.briefing);
-  state.showBanner(m.name);
+  game.showDialogue(m.giver, m.briefing);
+  game.showBanner(m.name);
   return true;
 }
 
-export function advanceObjective(ms, state) {
+export function advanceObjective(ms, game) {
   const m = currentMission(ms);
   ms.objectiveIndex++;
   if (m.triggerWantedAt === ms.objectiveIndex && m.startWanted) {
-    state.setWanted(m.startWanted);
-    state.showToast("The heat is on! Lose the cops!");
+    game.setWanted(m.startWanted);
+    game.showToast("The heat is on! Lose the cops!");
   }
-  if (ms.objectiveIndex >= m.objectives.length) {
-    completeMission(ms, state);
-  } else {
-    sfx.pickup();
-  }
+  if (ms.objectiveIndex >= m.objectives.length) completeMission(ms, game);
+  else sfx.pickup();
 }
 
-export function completeMission(ms, state) {
+export function completeMission(ms, game) {
   const m = currentMission(ms);
   ms.active = false;
   ms.completed.push(m.id);
-  state.money += m.reward;
-  state.stats.missionsDone++;
-  state.showMissionComplete(m);
+  game.money += m.reward;
+  game.stats.missionsDone++;
+  game.showMissionComplete(m);
   sfx.missionPass();
   ms.index++;
 }
 
-export function failMission(ms, state, reason) {
+export function failMission(ms, game, reason) {
   ms.active = false;
   ms.failed = true;
-  state.showToast("Mission failed: " + reason);
+  game.showToast("Mission failed: " + reason);
   sfx.missionFail();
 }
 
-// Per-frame objective checking
-export function updateMissions(ms, state, dt) {
+export function updateMissions(ms, game) {
   if (!ms.active) return;
   const obj = currentObjective(ms);
   if (!obj) return;
-  const p = state.player;
+  const p = game.player;
   if (obj.type === "goto") {
-    if (dist2(p.x, p.y, obj.x, obj.y) < obj.radius * obj.radius) {
-      advanceObjective(ms, state);
-    }
+    if (dist2(p.x, p.y, obj.x, obj.y) < obj.radius * obj.radius) advanceObjective(ms, game);
   } else if (obj.type === "wanted") {
-    if (state.wanted <= obj.level) advanceObjective(ms, state);
+    if (game.wanted <= obj.level) advanceObjective(ms, game);
   } else if (obj.type === "eliminate") {
-    if (ms.kills >= obj.count) advanceObjective(ms, state);
+    if (ms.kills >= obj.count) advanceObjective(ms, game);
   }
 }
 
+// Objective text with live progress for eliminate objectives.
 export function objectiveText(ms) {
   const obj = currentObjective(ms);
   if (!obj) return "";
-  if (obj.type === "eliminate") {
-    return obj.text.replace(/\(\d+\/\d+\)/, `(${ms.kills}/${obj.count})`);
-  }
+  if (obj.type === "eliminate") return obj.text.replace(/\(\d+\/\d+\)/, `(${ms.kills}/${obj.count})`);
   return obj.text;
 }

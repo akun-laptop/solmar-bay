@@ -1,31 +1,48 @@
-// SOLMAR BAY — procedural sprite drawing (all art is code, no image files)
+// SOLMAR BAY — every sprite is drawn in code: cars, people, buildings,
+// trees and lamps. No image files anywhere in the game.
 import { PAL } from "./config.js";
 
-// Draw a top-down car: body, cabin, windshield, lights, wheels
+export function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+
+// Lighten (positive) or darken (negative) a hex colour.
+export function shade(hex, amt) {
+  const n = parseInt(hex.slice(1), 16);
+  const r = Math.max(0, Math.min(255, (n >> 16) + amt));
+  const g = Math.max(0, Math.min(255, ((n >> 8) & 255) + amt));
+  const b = Math.max(0, Math.min(255, (n & 255) + amt));
+  return `rgb(${r},${g},${b})`;
+}
+
+// Top-down car: shadow, wheels, body, cabin, lights, livery.
 export function drawCar(ctx, x, y, angle, color, opts = {}) {
   const L = opts.length || 46, W = opts.width || 22;
   ctx.save();
   ctx.translate(x, y);
   ctx.rotate(angle);
-  // shadow
   ctx.fillStyle = "rgba(0,0,0,0.3)";
   ctx.fillRect(-L / 2 + 2, -W / 2 + 3, L, W);
   // wheels
   ctx.fillStyle = "#141414";
-  const ww = 8, wh = 4;
-  ctx.fillRect(-L / 2 + 4, -W / 2 - 2, ww, wh);
-  ctx.fillRect(-L / 2 + 4, W / 2 - 2, ww, wh);
-  ctx.fillRect(L / 2 - 12, -W / 2 - 2, ww, wh);
-  ctx.fillRect(L / 2 - 12, W / 2 - 2, ww, wh);
+  ctx.fillRect(-L / 2 + 4, -W / 2 - 2, 8, 4);
+  ctx.fillRect(-L / 2 + 4, W / 2 - 2, 8, 4);
+  ctx.fillRect(L / 2 - 12, -W / 2 - 2, 8, 4);
+  ctx.fillRect(L / 2 - 12, W / 2 - 2, 8, 4);
   // body
   ctx.fillStyle = color;
   roundRect(ctx, -L / 2, -W / 2, L, W, 6);
   ctx.fill();
-  // cabin
+  // cabin + windshield
   ctx.fillStyle = "rgba(20,30,45,0.92)";
   roundRect(ctx, -L / 6, -W / 2 + 4, L / 3, W - 8, 3);
   ctx.fill();
-  // windshield highlight
   ctx.fillStyle = "rgba(160,220,255,0.5)";
   ctx.fillRect(L / 6 - 2, -W / 2 + 5, 3, W - 10);
   // headlights / taillights
@@ -35,7 +52,6 @@ export function drawCar(ctx, x, y, angle, color, opts = {}) {
   ctx.fillStyle = "#ff3b30";
   ctx.fillRect(-L / 2, -W / 2 + 2, 3, 4);
   ctx.fillRect(-L / 2, W / 2 - 6, 3, 4);
-  // taxi sign
   if (opts.taxi) {
     ctx.fillStyle = "#ffd700";
     ctx.fillRect(-4, -4, 8, 8);
@@ -44,7 +60,6 @@ export function drawCar(ctx, x, y, angle, color, opts = {}) {
     ctx.textAlign = "center";
     ctx.fillText("TAXI", 0, 2);
   }
-  // police livery
   if (opts.police) {
     ctx.fillStyle = "#f5f5f5";
     ctx.fillRect(-L / 2 + 6, -W / 2 + 1, L - 12, 3);
@@ -58,7 +73,6 @@ export function drawCar(ctx, x, y, angle, color, opts = {}) {
       ctx.beginPath(); ctx.arc(0, 0, 17, 0, Math.PI * 2); ctx.fill();
     }
   }
-  // damage smoke handled by effects; show dents
   if (opts.damage > 0.5) {
     ctx.fillStyle = "rgba(0,0,0,0.35)";
     ctx.fillRect(-L / 2 + 2, -W / 2 + 2, 10, 6);
@@ -66,48 +80,39 @@ export function drawCar(ctx, x, y, angle, color, opts = {}) {
   ctx.restore();
 }
 
-// Draw a top-down person: shadow, body circle, head, direction indicator
+// Top-down person: shadow, torso, head, and an arm pointing where they face.
 export function drawPerson(ctx, x, y, angle, shirt, skin, opts = {}) {
   ctx.save();
   ctx.translate(x, y);
-  // shadow
   ctx.fillStyle = "rgba(0,0,0,0.3)";
   ctx.beginPath(); ctx.ellipse(1, 2, 9, 7, 0, 0, Math.PI * 2); ctx.fill();
-  // body
   ctx.fillStyle = shirt;
   ctx.beginPath(); ctx.arc(0, 0, 9, 0, Math.PI * 2); ctx.fill();
-  // shoulders
   ctx.fillStyle = shade(shirt, -18);
   ctx.beginPath(); ctx.arc(-4, -3, 4, 0, Math.PI * 2); ctx.fill();
   ctx.beginPath(); ctx.arc(-4, 3, 4, 0, Math.PI * 2); ctx.fill();
-  // head
   ctx.fillStyle = skin;
   ctx.beginPath(); ctx.arc(2, 0, 5.5, 0, Math.PI * 2); ctx.fill();
-  // facing nub (gun arm when aiming)
   ctx.rotate(angle);
   ctx.fillStyle = opts.armed ? "#222" : skin;
   ctx.fillRect(6, -2, opts.armed ? 12 : 6, 4);
   ctx.restore();
 }
 
-// Draw a building with height shading + roof detail
-export function drawBuilding(ctx, b, sunAngle) {
+// Building with a sun shadow, shaded walls and a roof detail.
+export function drawBuilding(ctx, b) {
   const h = b.hgt;
-  // drop shadow (sun from top-left)
   ctx.fillStyle = "rgba(0,0,0,0.28)";
   ctx.fillRect(b.x + h * 0.4, b.y + h * 0.4, b.w, b.h);
-  // walls
   ctx.fillStyle = shade(b.color, -32);
   ctx.fillRect(b.x, b.y + 3, b.w, b.h);
-  // roof
   ctx.fillStyle = b.color;
   ctx.fillRect(b.x, b.y, b.w, b.h - 3);
-  // roof detail
   ctx.fillStyle = shade(b.color, 18);
   if (b.roof === "flat") {
     ctx.fillRect(b.x + 6, b.y + 6, b.w - 12, b.h - 16);
     ctx.fillStyle = shade(b.color, -12);
-    ctx.fillRect(b.x + b.w / 2 - 5, b.y + b.h / 2 - 5, 10, 10); // AC unit
+    ctx.fillRect(b.x + b.w / 2 - 5, b.y + b.h / 2 - 5, 10, 10);
   } else {
     ctx.beginPath();
     ctx.moveTo(b.x, b.y + b.h - 3);
@@ -116,7 +121,6 @@ export function drawBuilding(ctx, b, sunAngle) {
     ctx.closePath();
     ctx.fill();
   }
-  // edge
   ctx.strokeStyle = "rgba(0,0,0,0.35)";
   ctx.lineWidth = 1;
   ctx.strokeRect(b.x + 0.5, b.y + 0.5, b.w - 1, b.h - 4);
@@ -156,22 +160,4 @@ export function drawLamp(ctx, x, y, night) {
     ctx.fillStyle = g;
     ctx.beginPath(); ctx.arc(x, y, 26, 0, Math.PI * 2); ctx.fill();
   }
-}
-
-export function roundRect(ctx, x, y, w, h, r) {
-  ctx.beginPath();
-  ctx.moveTo(x + r, y);
-  ctx.arcTo(x + w, y, x + w, y + h, r);
-  ctx.arcTo(x + w, y + h, x, y + h, r);
-  ctx.arcTo(x, y + h, x, y, r);
-  ctx.arcTo(x, y, x + w, y, r);
-  ctx.closePath();
-}
-
-// Lighten/darken a hex color by amount (-100..100)
-export function shade(hex, amt) {
-  const n = parseInt(hex.slice(1), 16);
-  let r = (n >> 16) + amt, g = ((n >> 8) & 255) + amt, b = (n & 255) + amt;
-  r = Math.max(0, Math.min(255, r)); g = Math.max(0, Math.min(255, g)); b = Math.max(0, Math.min(255, b));
-  return `rgb(${r},${g},${b})`;
 }

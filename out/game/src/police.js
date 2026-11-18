@@ -1,63 +1,58 @@
-// SOLMAR BAY — wanted system + police AI (cars chase, cops on foot)
+// SOLMAR BAY — the wanted system and the VCPD. More stars mean more
+// pursuit cars and more foot cops; cops stand down and leave once the
+// heat is gone. A cop that touches the player on foot makes the bust.
 import { CFG } from "./config.js";
-import { city } from "./city.js";
-import { clamp, rand, pick, angleDiff, dist2 } from "./utils.js";
-import { spawnVehicle, driveVehicle, vehicles } from "./vehicles.js";
+import { rand, clamp, angleDiff } from "./utils.js";
+import { spawnVehicle, driveVehicle } from "./vehicles.js";
 import { drawPerson } from "./sprites.js";
 import { copFire } from "./combat.js";
 import { sfx } from "./audio.js";
 
-export const cops = [];        // on-foot police
-export const copCars = [];     // police vehicles (also in vehicles[])
+export const cops = [];     // foot police
+export const copCars = [];  // pursuit cars (also listed in vehicles[])
 
+// How many pursuers each wanted level fields.
 export function wantedFor(stars) {
-  // how many cop cars / foot cops at each level
   return {
     cars: [0, 1, 2, 3, 4, 5][stars] || 0,
     foot: [0, 0, 1, 2, 4, 6][stars] || 0,
   };
 }
 
-export function spawnCopCar(state) {
-  const p = state.player;
-  // spawn off-screen on a road, in the direction the player is heading
+export function spawnCopCar(game) {
+  const p = game.player;
   for (let tries = 0; tries < 8; tries++) {
     const a = rand(0, Math.PI * 2);
     const d = rand(CFG.COP_SPAWN_DIST, CFG.COP_SPAWN_DIST + 260);
     const x = p.x + Math.cos(a) * d, y = p.y + Math.sin(a) * d;
     if (x < 60 || x > CFG.WORLD_W - 60 || y < 60 || y > CFG.WORLD_H - 60) continue;
     const v = spawnVehicle("police", x, y, rand(0, Math.PI * 2), { driver: "police" });
-    v.policeAI = makeCopCarAI(v, state);
+    v.policeAI = makeCopCarAI(v, game);
     copCars.push(v);
     return v;
   }
   return null;
 }
 
-function makeCopCarAI(v, state) {
+// Pursuit driving: aim at the player's position, leading a moving car,
+// and ram. A slow touch on a player on foot is a bust.
+function makeCopCarAI(v, game) {
   return (dt) => {
-    const p = state.player;
+    const p = game.player;
     if (p.dead) { driveVehicle(v, dt, 0, 0, false); return; }
-    const want = Math.atan2(p.y - v.y, p.x - v.x);
-    const diff = angleDiff(v.angle, want);
-    const steer = clamp(diff * 2.6, -1, 1);
-    // ram the player: full throttle, aim slightly ahead of a moving player
     let tx = p.x, ty = p.y;
     if (p.inCar) { tx += (p.inCar.vx || 0) * 0.35; ty += (p.inCar.vy || 0) * 0.35; }
-    const want2 = Math.atan2(ty - v.y, tx - v.x);
-    const diff2 = angleDiff(v.angle, want2);
-    driveVehicle(v, dt, 1, clamp(diff2 * 2.6, -1, 1), false);
-    // siren blip
+    const want = Math.atan2(ty - v.y, tx - v.x);
+    driveVehicle(v, dt, 1, clamp(angleDiff(v.angle, want) * 2.6, -1, 1), false);
     if (Math.random() < dt * 0.5) sfx.siren();
-    // touch = bust if player on foot and slow
     if (!p.inCar && Math.hypot(p.x - v.x, p.y - v.y) < 40 && Math.abs(v.speed) < 60) {
-      state.onBusted();
+      game.onBusted();
     }
   };
 }
 
-export function spawnFootCop(state) {
-  const p = state.player;
+export function spawnFootCop(game) {
+  const p = game.player;
   for (let tries = 0; tries < 8; tries++) {
     const a = rand(0, Math.PI * 2);
     const d = rand(380, 560);
@@ -73,23 +68,21 @@ export function spawnFootCop(state) {
   return null;
 }
 
-export function updatePolice(dt, state) {
-  const p = state.player;
-  const want = wantedFor(state.wanted);
-  // spawn to quota
+export function updatePolice(dt, game) {
+  const p = game.player;
+  const want = wantedFor(game.wanted);
   const liveCars = copCars.filter((v) => !v.dead).length;
-  if (state.wanted > 0 && liveCars < want.cars && Math.random() < dt * 0.9) spawnCopCar(state);
+  if (game.wanted > 0 && liveCars < want.cars && Math.random() < dt * 0.9) spawnCopCar(game);
   const liveFoot = cops.filter((c) => !c.dead).length;
-  if (state.wanted > 0 && liveFoot < want.foot && Math.random() < dt * 0.7) spawnFootCop(state);
-  // remove far/dead cop cars
+  if (game.wanted > 0 && liveFoot < want.foot && Math.random() < dt * 0.7) spawnFootCop(game);
+
   for (let i = copCars.length - 1; i >= 0; i--) {
     const v = copCars[i];
-    if (v.dead && (v.deadT || 0) > 12) copCars.splice(i, 1);
-    else if (!v.dead && state.wanted === 0 && Math.hypot(v.x - p.x, v.y - p.y) > 900) {
+    if (v.dead && v.deadT > 12) copCars.splice(i, 1);
+    else if (!v.dead && game.wanted === 0 && Math.hypot(v.x - p.x, v.y - p.y) > 900) {
       v.driver = null; v.policeAI = null; copCars.splice(i, 1);
     }
   }
-  // foot cops: chase + shoot
   for (let i = cops.length - 1; i >= 0; i--) {
     const c = cops[i];
     if (c.dead) {
@@ -97,8 +90,7 @@ export function updatePolice(dt, state) {
       if (c.deadT > 15) cops.splice(i, 1);
       continue;
     }
-    if (state.wanted === 0) {
-      // stand down: walk away, despawn when far
+    if (game.wanted === 0) {
       c.x += Math.cos(c.angle) * 60 * dt;
       c.y += Math.sin(c.angle) * 60 * dt;
       if (Math.hypot(c.x - p.x, c.y - p.y) > 800) cops.splice(i, 1);
@@ -110,15 +102,13 @@ export function updatePolice(dt, state) {
       c.x += Math.cos(c.angle) * c.speed * dt;
       c.y += Math.sin(c.angle) * c.speed * dt;
     } else {
-      // in range: shoot
       c.fireT -= dt;
       if (c.fireT <= 0 && !p.dead) {
-        copFire(c, state);
+        copFire(c, game);
         c.fireT = rand(0.7, 1.4);
       }
     }
-    // bust: touch the player on foot
-    if (!p.inCar && d < 26 && !p.dead) state.onBusted();
+    if (!p.inCar && d < 26 && !p.dead) game.onBusted();
   }
 }
 
@@ -142,7 +132,6 @@ export function drawCops(ctx, cam) {
       continue;
     }
     drawPerson(ctx, c.x, c.y, c.angle, "#1a1a2e", "#e0ac69", { armed: true });
-    // badge dot
     ctx.fillStyle = "#ffd700";
     ctx.beginPath(); ctx.arc(c.x - 4, c.y - 4, 2, 0, Math.PI * 2); ctx.fill();
   }

@@ -1,9 +1,11 @@
-// SOLMAR BAY — synthesized audio: SFX + ambient music via WebAudio (no files)
+// SOLMAR BAY — all sound is synthesized with WebAudio: no audio files.
+// Two primitives (tone, noise) build every effect; a tiny sequencer plays
+// a chilled bass-and-pad loop while the game runs.
 let ctx = null;
 let master = null;
-let musicNodes = null;
 let muted = false;
 let engineOsc = null, engineGain = null;
+let musicTimer = null, barCount = 0;
 
 export function initAudio() {
   if (ctx) return;
@@ -30,6 +32,7 @@ function tone(freq, dur, type, vol, slideTo) {
   o.connect(g); g.connect(master);
   o.start(t); o.stop(t + dur + 0.02);
 }
+
 function noise(dur, vol, filterFreq, type) {
   if (!ctx || muted) return;
   const t = ctx.currentTime;
@@ -50,26 +53,26 @@ function noise(dur, vol, filterFreq, type) {
 }
 
 export const sfx = {
-  shoot() { noise(0.09, 0.35, 2600, "highpass"); tone(180, 0.08, "square", 0.12, 60); },
+  shoot()   { noise(0.09, 0.35, 2600, "highpass"); tone(180, 0.08, "square", 0.12, 60); },
   shotgun() { noise(0.22, 0.5, 1800, "lowpass"); tone(120, 0.15, "square", 0.2, 40); },
-  punch() { noise(0.07, 0.3, 500, "lowpass"); },
-  hit() { tone(220, 0.06, "triangle", 0.2, 140); },
-  crash() { noise(0.25, 0.5, 900, "lowpass"); tone(90, 0.2, "sawtooth", 0.15, 40); },
-  skid() { noise(0.18, 0.12, 3200, "bandpass"); },
+  punch()   { noise(0.07, 0.3, 500, "lowpass"); },
+  hit()     { tone(220, 0.06, "triangle", 0.2, 140); },
+  crash()   { noise(0.25, 0.5, 900, "lowpass"); tone(90, 0.2, "sawtooth", 0.15, 40); },
+  skid()    { noise(0.18, 0.12, 3200, "bandpass"); },
   explosion() { noise(0.7, 0.7, 500, "lowpass"); tone(60, 0.6, "sine", 0.4, 25); },
-  pickup() { tone(660, 0.09, "sine", 0.2); setTimeout(() => tone(990, 0.12, "sine", 0.2), 90); },
-  cash() { tone(880, 0.07, "triangle", 0.2); setTimeout(() => tone(1320, 0.14, "triangle", 0.2), 70); },
+  pickup()  { tone(660, 0.09, "sine", 0.2); setTimeout(() => tone(990, 0.12, "sine", 0.2), 90); },
+  cash()    { tone(880, 0.07, "triangle", 0.2); setTimeout(() => tone(1320, 0.14, "triangle", 0.2), 70); },
   missionPass() { [523, 659, 784, 1047].forEach((f, i) => setTimeout(() => tone(f, 0.22, "triangle", 0.25), i * 130)); },
   missionFail() { [400, 320, 240].forEach((f, i) => setTimeout(() => tone(f, 0.25, "sawtooth", 0.15), i * 160)); },
-  siren() { tone(750, 0.4, "sine", 0.06, 950); setTimeout(() => tone(950, 0.4, "sine", 0.06, 750), 400); },
-  door() { noise(0.08, 0.2, 700, "lowpass"); tone(140, 0.06, "square", 0.08, 90); },
-  enterCar() { tone(300, 0.1, "triangle", 0.15, 500); },
-  horn() { tone(370, 0.25, "square", 0.12); tone(466, 0.25, "square", 0.1); },
-  click() { tone(800, 0.05, "square", 0.08); },
-  star() { tone(1200, 0.15, "sine", 0.2, 1600); },
+  siren()   { tone(750, 0.4, "sine", 0.06, 950); setTimeout(() => tone(950, 0.4, "sine", 0.06, 750), 400); },
+  door()    { noise(0.08, 0.2, 700, "lowpass"); tone(140, 0.06, "square", 0.08, 90); },
+  enterCar(){ tone(300, 0.1, "triangle", 0.15, 500); },
+  horn()    { tone(370, 0.25, "square", 0.12); tone(466, 0.25, "square", 0.1); },
+  click()   { tone(800, 0.05, "square", 0.08); },
+  star()    { tone(1200, 0.15, "sine", 0.2, 1600); },
 };
 
-// Engine hum: follows vehicle speed (0..1)
+// Engine hum: a filtered sawtooth whose pitch follows vehicle speed (0..1).
 export function setEngine(on, speedNorm) {
   if (!ctx) return;
   if (on && !engineOsc) {
@@ -90,26 +93,22 @@ export function setEngine(on, speedNorm) {
   }
 }
 
-// Chill synthwave-ish loop: bass + pad, scheduled per bar
-const BASS_LINE = [55, 55, 65.4, 49, 55, 55, 82.4, 73.4]; // A1 A1 C2 G1 A1 A1 E2 D2
+// Music: one 2-second bar per tick — a bass note, a soft pad chord, a hat tick.
+const BASS_LINE = [55, 55, 65.4, 49, 55, 55, 82.4, 73.4];
 const PAD_CHORDS = [[110, 164.8, 220], [87.3, 130.8, 174.6], [98, 146.8, 196], [82.4, 123.5, 164.8]];
-let musicTimer = null, barCount = 0;
 export function startMusic() {
   if (!ctx || musicTimer) return;
-  const barMs = 2000;
   const playBar = () => {
     if (!ctx || muted) { barCount++; return; }
     const t = ctx.currentTime;
     const bass = BASS_LINE[barCount % BASS_LINE.length];
     const chord = PAD_CHORDS[Math.floor(barCount / 2) % PAD_CHORDS.length];
-    // bass note
     const o = ctx.createOscillator(), g = ctx.createGain();
     o.type = "triangle"; o.frequency.value = bass;
     g.gain.setValueAtTime(0.0, t);
     g.gain.linearRampToValueAtTime(0.16, t + 0.08);
     g.gain.linearRampToValueAtTime(0.0, t + 1.8);
     o.connect(g); g.connect(master); o.start(t); o.stop(t + 1.9);
-    // pad
     chord.forEach((f) => {
       const po = ctx.createOscillator(), pg = ctx.createGain();
       po.type = "sine"; po.frequency.value = f;
@@ -118,11 +117,10 @@ export function startMusic() {
       pg.gain.linearRampToValueAtTime(0.0, t + 1.95);
       po.connect(pg); pg.connect(master); po.start(t); po.stop(t + 2.0);
     });
-    // hat tick
     if (barCount % 2 === 0) noise(0.04, 0.05, 6000, "highpass");
     barCount++;
   };
   playBar();
-  musicTimer = setInterval(playBar, barMs);
+  musicTimer = setInterval(playBar, 2000);
 }
 export function stopMusic() { if (musicTimer) { clearInterval(musicTimer); musicTimer = null; } }

@@ -1,25 +1,27 @@
-// SOLMAR BAY — math + RNG helpers
+// SOLMAR BAY — small math, random and formatting helpers shared by every system.
 export const TAU = Math.PI * 2;
 
-export function clamp(v, a, b) { return v < a ? a : v > b ? b : v; }
+export function clamp(v, lo, hi) { return v < lo ? lo : v > hi ? hi : v; }
 export function lerp(a, b, t) { return a + (b - a) * t; }
 export function dist(ax, ay, bx, by) { return Math.hypot(bx - ax, by - ay); }
 export function dist2(ax, ay, bx, by) { const dx = bx - ax, dy = by - ay; return dx * dx + dy * dy; }
 export function angleTo(ax, ay, bx, by) { return Math.atan2(by - ay, bx - ax); }
 
-// Shortest signed angular difference
+// Shortest signed turn from angle a to angle b, in (-PI, PI].
 export function angleDiff(a, b) {
   let d = (b - a) % TAU;
   if (d > Math.PI) d -= TAU;
   if (d < -Math.PI) d += TAU;
   return d;
 }
+
 export function rand(a, b) { return a + Math.random() * (b - a); }
 export function randInt(a, b) { return Math.floor(rand(a, b + 1)); }
-export function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+export function pick(list) { return list[Math.floor(Math.random() * list.length)]; }
 export function chance(p) { return Math.random() < p; }
 
-// Deterministic hash → [0,1) for stable procedural placement
+// Stable 2D hash in [0,1): same (x,y) always gives the same value, so the
+// procedural city looks identical every run without storing a seed map.
 export function hash2(x, y) {
   let h = (x * 374761393 + y * 668265263) | 0;
   h = (h ^ (h >> 13)) | 0;
@@ -28,7 +30,7 @@ export function hash2(x, y) {
   return h / 4294967295;
 }
 
-// Seeded RNG (mulberry32)
+// Seeded PRNG (mulberry32) for anything that needs a repeatable sequence.
 export function mulberry32(seed) {
   let a = seed >>> 0;
   return function () {
@@ -39,17 +41,16 @@ export function mulberry32(seed) {
   };
 }
 
-// Axis-aligned rect overlap
 export function rectsOverlap(ax, ay, aw, ah, bx, by, bw, bh) {
   return ax < bx + bw && ax + aw > bx && ay < by + bh && ay + ah > by;
 }
 
-// Point in rotated rect (car hit test): px,py world; cx,cy center; angle; half extents
-export function pointInCar(px, py, cx, cy, angle, hl, hw) {
+// Is world point (px,py) inside a rotated car body? Used for bullet hits.
+export function pointInCar(px, py, cx, cy, angle, halfLen, halfWid) {
   const c = Math.cos(-angle), s = Math.sin(-angle);
   const dx = px - cx, dy = py - cy;
   const lx = dx * c - dy * s, ly = dx * s + dy * c;
-  return Math.abs(lx) <= hl && Math.abs(ly) <= hw;
+  return Math.abs(lx) <= halfLen && Math.abs(ly) <= halfWid;
 }
 
 export function fmtMoney(n) { return "$" + Math.floor(n).toLocaleString("en-US"); }
