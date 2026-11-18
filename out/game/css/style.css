@@ -1,0 +1,64 @@
+/* SOLMAR BAY — HUD + menu styling */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 100%; height: 100%; overflow: hidden; background: #0a0a12; }
+body { font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif; color: #fff; }
+#game-wrap { position: relative; width: 1280px; height: 720px; margin: 0 auto; top: 50%; transform: translateY(-50%); }
+#game { display: block; width: 1280px; height: 720px; background: #1a2b1e; }
+.hidden { display: none !important; }
+
+/* ---------- HUD ---------- */
+#hud { position: absolute; inset: 0; pointer-events: none; text-shadow: 2px 2px 3px rgba(0,0,0,.9); }
+#hud-top-right { position: absolute; top: 14px; right: 16px; text-align: right; }
+#wanted { font-size: 28px; letter-spacing: 2px; color: #ffd700; min-height: 34px; }
+#clock { font-size: 22px; font-weight: 700; }
+#money { font-size: 24px; font-weight: 800; color: #7cf29c; }
+#hud-bottom-left { position: absolute; left: 16px; bottom: 16px; width: 260px; }
+#health-bar, #armor-bar { height: 12px; background: rgba(0,0,0,.55); border: 1px solid rgba(255,255,255,.35); margin-bottom: 5px; }
+#health-fill { height: 100%; background: linear-gradient(90deg, #ff3b30, #ff9500); width: 100%; }
+#armor-fill { height: 100%; background: linear-gradient(90deg, #5ac8fa, #007aff); width: 0%; }
+#weapon-info { font-size: 17px; font-weight: 700; }
+#hud-bottom-right { position: absolute; right: 16px; bottom: 16px; text-align: right; }
+#minimap { border: 2px solid rgba(255,255,255,.5); border-radius: 4px; background: #0d1a12; }
+#speedo { font-size: 20px; font-weight: 800; margin-top: 4px; }
+#objective { position: absolute; top: 14px; left: 16px; max-width: 420px; font-size: 17px; font-weight: 600; background: rgba(0,0,0,.55); padding: 8px 12px; border-left: 4px solid #ffd700; border-radius: 3px; }
+#mission-banner { position: absolute; top: 110px; left: 50%; transform: translateX(-50%); font-size: 30px; font-weight: 900; letter-spacing: 3px; color: #ffd700; text-align: center; opacity: 0; transition: opacity .4s; }
+#toast { position: absolute; bottom: 200px; left: 50%; transform: translateX(-50%); font-size: 19px; font-weight: 700; background: rgba(0,0,0,.65); padding: 8px 18px; border-radius: 20px; opacity: 0; transition: opacity .3s; }
+#dialogue { position: absolute; bottom: 200px; left: 50%; transform: translateX(-50%); width: 640px; background: rgba(0,0,0,.72); border-radius: 8px; padding: 12px 18px; font-size: 17px; display: none; }
+#dialogue-speaker { font-weight: 900; color: #ffd700; margin-right: 8px; }
+
+/* ---------- Screens ---------- */
+#start-screen, #pause-screen, #end-screen {
+  position: absolute; inset: 0; display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  background: linear-gradient(160deg, rgba(8,20,40,.88), rgba(60,10,40,.82));
+  text-align: center;
+}
+.title-kicker { font-size: 18px; letter-spacing: 8px; color: #ffd700; }
+.title-block h1 {
+  font-size: 84px; font-weight: 900; letter-spacing: 4px; line-height: 1;
+  background: linear-gradient(180deg, #ffe259, #ffa751, #ff5e62);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  text-shadow: none; margin: 8px 0;
+}
+.title-sub { font-size: 17px; letter-spacing: 6px; color: #cfe8ff; }
+.menu-buttons { display: flex; flex-direction: column; gap: 12px; margin-top: 34px; }
+.menu-buttons button {
+  font-family: inherit; font-size: 19px; font-weight: 800; letter-spacing: 2px;
+  color: #fff; background: rgba(255,255,255,.08); border: 2px solid rgba(255,255,255,.45);
+  padding: 12px 46px; cursor: pointer; border-radius: 4px; transition: all .15s;
+}
+.menu-buttons button:hover { background: #ffd700; color: #111; border-color: #ffd700; }
+#controls-panel { margin-top: 22px; font-size: 15px; line-height: 1.9; color: #dfeaff; background: rgba(0,0,0,.4); padding: 12px 26px; border-radius: 8px; }
+.title-foot { position: absolute; bottom: 18px; font-size: 12px; color: rgba(255,255,255,.55); }
+#pause-screen h2, #end-screen h2 { font-size: 56px; font-weight: 900; letter-spacing: 6px; }
+#end-title { color: #ff3b30; }
+#end-sub { font-size: 18px; color: #ddd; margin-top: 8px; }
+#pause-stats { margin-top: 24px; font-size: 16px; line-height: 1.8; color: #cfe8ff; }
+#mission-complete {
+  position: absolute; top: 34%; left: 50%; transform: translate(-50%, -50%);
+  text-align: center; background: rgba(0,0,0,.78); padding: 28px 60px; border-radius: 10px;
+  border: 2px solid #ffd700;
+}
+.mc-title { font-size: 34px; font-weight: 900; color: #7cf29c; letter-spacing: 3px; }
+#mc-name { font-size: 20px; margin-top: 8px; }
+#mc-reward { font-size: 24px; font-weight: 800; color: #ffd700; margin-top: 6px; }

@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SOLMAR BAY — Open World Crime</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="game-wrap">
+  <canvas id="game" width="1280" height="720"></canvas>
+
+  <!-- HUD -->
+  <div id="hud" class="hidden">
+    <div id="hud-top-right">
+      <div id="wanted"></div>
+      <div id="clock">12:00</div>
+      <div id="money">$0</div>
+    </div>
+    <div id="hud-bottom-left">
+      <div id="health-bar"><div id="health-fill"></div></div>
+      <div id="armor-bar"><div id="armor-fill"></div></div>
+      <div id="weapon-info"></div>
+    </div>
+    <div id="hud-bottom-right">
+      <canvas id="minimap" width="220" height="160"></canvas>
+      <div id="speedo"></div>
+    </div>
+    <div id="objective"></div>
+    <div id="mission-banner"></div>
+    <div id="toast"></div>
+    <div id="dialogue"><span id="dialogue-speaker"></span><span id="dialogue-text"></span></div>
+  </div>
+
+  <!-- Start screen -->
+  <div id="start-screen">
+    <div class="title-block">
+      <div class="title-kicker">WELCOME TO</div>
+      <h1>SOLMAR BAY</h1>
+      <div class="title-sub">AN OPEN-WORLD CRIME STORY</div>
+    </div>
+    <div class="menu-buttons">
+      <button id="btn-new">NEW GAME</button>
+      <button id="btn-continue" class="hidden">CONTINUE</button>
+      <button id="btn-controls">CONTROLS</button>
+    </div>
+    <div id="controls-panel" class="hidden">
+      <div><b>WASD / Arrows</b> — move / drive</div>
+      <div><b>Mouse</b> — aim &nbsp; <b>Click</b> — shoot / punch</div>
+      <div><b>E</b> — enter / exit car &nbsp; <b>Shift</b> — sprint / handbrake</div>
+      <div><b>R</b> — reload &nbsp; <b>1–3</b> — weapons &nbsp; <b>Esc</b> — pause &nbsp; <b>M</b> — mute</div>
+    </div>
+    <div class="title-foot">An original game. No affiliation with Rockstar Games.</div>
+  </div>
+
+  <!-- Pause menu -->
+  <div id="pause-screen" class="hidden">
+    <h2>PAUSED</h2>
+    <div class="menu-buttons">
+      <button id="btn-resume">RESUME</button>
+      <button id="btn-save">SAVE GAME</button>
+      <button id="btn-quit">QUIT TO TITLE</button>
+    </div>
+    <div id="pause-stats"></div>
+  </div>
+
+  <!-- Game over / busted -->
+  <div id="end-screen" class="hidden">
+    <h2 id="end-title">WASTED</h2>
+    <div id="end-sub"></div>
+    <div class="menu-buttons">
+      <button id="btn-retry">TRY AGAIN</button>
+      <button id="btn-title">TITLE SCREEN</button>
+    </div>
+  </div>
+
+  <!-- Mission complete -->
+  <div id="mission-complete" class="hidden">
+    <div class="mc-title">MISSION PASSED</div>
+    <div id="mc-name"></div>
+    <div id="mc-reward"></div>
+  </div>
+</div>
+
+<script type="module" src="src/main.js"></script>
+</body>
+</html>
